@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Chat HuggingFace 2026</title>
+<style>
+body { font-family: Arial; margin:20px; }
+#msgs { border:1px solid #002D58; padding:10px; height:300px; overflow-y:auto; display:flex; flex-direction:column; background:#f9f9f9; }
+.user { color:#002D58; font-weight:bold; margin:6px 0; }
+.ai { color:#333; background:#eee; padding:6px; border-radius:6px; margin:6px 0; }
+input { padding:6px; width:300px; }
+button { padding:6px 12px; margin-left:6px; }
+</style>
+</head>
+<body>
+
+<h3>Chat HuggingFace 2026</h3>
+<div id="msgs"></div>
+<input id="input" placeholder="Pose ta question...">
+<button id="send">Envoyer</button>
+
+<script>
+const msgs = document.getElementById("msgs");
+const input = document.getElementById("input");
+const send = document.getElementById("send");
+
+function addMessage(text, cls){
+  const div = document.createElement("div");
+  div.className = cls;
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+send.onclick = async () => {
+  const message = input.value.trim();
+  if(!message) return;
+
+  input.value = "";
+  addMessage(message, "user");
+  addMessage("🤖 IA réfléchit...", "ai");
+
+  try{
+    const res = await fetch("/api/chat", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ message })
+    });
+    const data = await res.json();
+    msgs.lastChild.textContent = data.text;
+  }catch(err){
+    msgs.lastChild.textContent = "❌ Erreur de connexion IA";
+  }
+};
+</script>
+
+</body>
+</html>

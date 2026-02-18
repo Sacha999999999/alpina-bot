@@ -2,30 +2,30 @@
 import fetch from "node-fetch";
 import { Pinecone } from "@pinecone-database/pinecone";
 
-// 🔹 Tokens et index
+// 🔹 Tokens & config
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME;
 
-// 🔹 Initialise Pinecone (sans 'environment')
+// 🔹 Initialise Pinecone client (sans properties non supportées)
 const pc = new Pinecone({
   apiKey: PINECONE_API_KEY,
 });
 const index = pc.index(PINECONE_INDEX_NAME);
 
-// 🔹 Ajouter un texte dans Pinecone
+// 🔹 Ajout d’un texte + embedding dans Pinecone
 async function addToVectorDB(id, text, embedding) {
   try {
     await index.upsert({
       vectors: [{ id, values: embedding, metadata: { text } }],
     });
-    console.log(`✅ Ajouté dans Pinecone : ${id}`);
+    console.log(`✅ Upserted vector to Pinecone: ${id}`);
   } catch (err) {
-    console.error("❌ Erreur Pinecone upsert :", err.message);
+    console.error("❌ Pinecone upsert error:", err.message);
   }
 }
 
-// 🔹 Recherche vecteurs proches dans Pinecone
+// 🔹 Query Pinecone pour retrouver du contexte
 async function queryVectorDB(embedding, topK = 3) {
   try {
     const result = await index.query({
@@ -33,63 +33,58 @@ async function queryVectorDB(embedding, topK = 3) {
       vector: embedding,
       includeMetadata: true,
     });
-    return result.matches.map((m) => m.metadata.text);
+    return (result.matches || []).map((m) => m.metadata.text);
   } catch (err) {
-    console.error("❌ Erreur Pinecone query :", err.message);
+    console.error("❌ Pinecone query error:", err.message);
     return [];
   }
 }
 
-// 🔹 Handler API
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
+  if (req.method !== "POST")
     return res.status(405).json({ text: "Méthode non autorisée" });
-  }
 
   const { message } = req.body;
   if (!message) return res.status(400).json({ text: "Message vide" });
 
-  console.log("📩 Message reçu :", message);
-
   try {
-    // 1️⃣ Créer embedding HuggingFace
+    console.log("📩 Message reçu:", message);
+
+    // 🧠 1) Embeddings via **Hugging Face Router feature‑extraction**
     console.log("🔹 Création embedding...");
-    const embResp = await fetch(
-      "https://api-inference.huggingface.co/embeddings",
+    const embResponse = await fetch(
+      `https://router.huggingface.co/hf-inference/models/meta-llama/llama-text-embed-v2/pipeline/feature-extraction`,
       {
         method: "POST",
         headers: {
           Authorization: `Bearer ${HF_TOKEN}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          model: "meta-llama/llama-text-embed-v2",
-          input: message,
-        }),
+        body: JSON.stringify({ inputs: message }),
       }
     );
 
-    if (!embResp.ok) {
-      const text = await embResp.text();
-      console.error("❌ Erreur Embedding HF :", text);
-      return res.status(500).json({ text: `Erreur Embedding HF : ${text}` });
+    // On récupère du JSON ou bien du texte d’erreur clair
+    if (!embResponse.ok) {
+      const textErr = await embResponse.text();
+      console.error("❌ HF Embedding error:", textErr);
+      return res.status(500).json({ text: `Erreur Embedding HF: ${textErr}` });
     }
 
-    const embData = await embResp.json();
-    const embedding = embData?.data?.[0]?.embedding;
-
-    if (!embedding) {
-      console.warn("⚠️ Embedding non disponible :", embData);
+    const embData = await embResponse.json();
+    const embedding = Array.isArray(embData) ? embData[0] : embData?.[0];
+    if (!embedding || !Array.isArray(embedding)) {
+      console.warn("⚠️ Embedding non disponible:", embData);
     }
 
-    // 2️⃣ Rechercher contexte dans Pinecone
+    // 🧠 2) Query Pinecone si embedding ok
     let context = [];
-    if (embedding) {
+    if (Array.isArray(embedding)) {
       context = await queryVectorDB(embedding, 3);
-      console.log("🔹 Contexte trouvé :", context);
+      console.log("🔹 Contexte trouvé:", context);
     }
 
-    // 3️⃣ Préparer le prompt
+    // 🧠 3) Préparation prompt pour chat
     const prompt = `
 Voici des informations utiles tirées de la mémoire :
 ${context.join("\n")}
@@ -97,10 +92,10 @@ Utilisateur : ${message}
 Réponds de manière claire et précise :
 `;
 
-    // 4️⃣ Appel HuggingFace Chat
-    console.log("🔹 Appel modèle HF Chat...");
+    // 💬 4) Appel Chat HuggingFace Router (compatible OpenAI‑style)
+    console.log("🔹 Appel modèle HuggingFace Chat...");
     const chatResp = await fetch(
-      "https://api-inference.huggingface.co/v1/chat/completions",
+      "https://router.huggingface.co/v1/chat/completions",
       {
         method: "POST",
         headers: {
@@ -117,26 +112,25 @@ Réponds de manière claire et précise :
     );
 
     if (!chatResp.ok) {
-      const text = await chatResp.text();
-      console.error("❌ Erreur Chat HF :", text);
-      return res.status(500).json({ text: `Erreur Chat HF : ${text}` });
+      const textErr = await chatResp.text();
+      console.error("❌ HF Chat error:", textErr);
+      return res.status(500).json({ text: `Erreur Chat HF: ${textErr}` });
     }
 
     const chatData = await chatResp.json();
     const text =
       chatData?.choices?.[0]?.message?.content?.trim() ||
       "🤖 Pas de réponse du modèle.";
-    console.log("✅ Réponse finale :", text);
+    console.log("✅ Réponse modèle:", text);
 
-    // 5️⃣ Stocker la Q/R dans Pinecone
-    if (embedding) {
+    // 🧠 5) Stocker interaction dans Pinecone si embedding ok
+    if (Array.isArray(embedding)) {
       await addToVectorDB(`msg-${Date.now()}`, `${message} | ${text}`, embedding);
     }
 
     return res.status(200).json({ text });
   } catch (err) {
-    console.error("❌ Erreur serveur :", err);
-    return res.status(500).json({ text: `Erreur serveur : ${err.message}` });
+    console.error("❌ Erreur serveur:", err);
+    return res.status(500).json({ text: `Erreur serveur: ${err.message}` });
   }
 }
-

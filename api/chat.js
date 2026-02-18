@@ -1,86 +1,45 @@
-import { PineconeClient } from "@pinecone-database/pinecone";
-
-const pinecone = new PineconeClient();
-await pinecone.init({
-  apiKey: process.env.PINECONE_API_KEY,
-});
-const index = pinecone.Index(process.env.PINECONE_INDEX_NAME);
-
-const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
-
-// 🔹 Ajouter un texte dans Pinecone
-async function addToVectorDB(id, text, embedding) {
-  await index.upsert({
-    vectors: [{ id, values: embedding, metadata: { text } }],
-  });
-}
-
-// 🔹 Rechercher les vecteurs proches dans Pinecone
-async function queryVectorDB(embedding, topK = 3) {
-  const result = await index.query({
-    topK,
-    vector: embedding,
-    includeMetadata: true,
-  });
-  return result.matches.map(m => m.metadata.text);
-}
-
+// /api/chat.js
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ text: "Méthode non autorisée" });
-  
+  if (req.method !== "POST") {
+    return res.status(405).json({ text: "Méthode non autorisée" });
+  }
+
   const { message } = req.body;
   if (!message) return res.status(400).json({ text: "Message vide" });
 
+  // 🔑 Met ton token Hugging Face ici pour tester rapidement
+  // IMPORTANT : sur Vercel, tu peux remplacer par process.env.HUGGING_KEY
+  const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
+
+
   try {
-    // 1️⃣ Créer l'embedding du message avec Llama
-    const embResponse = await fetch(
-      "https://api-inference.huggingface.co/embeddings/meta-llama/llama-text-embed-v2",
+    const response = await fetch(
+      "https://router.huggingface.co/v1/chat/completions",
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ inputs: message }),
+        headers: {
+          Authorization: `Bearer ${HF_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "meta-llama/Meta-Llama-3-8B-Instruct",
+          messages: [{ role: "user", content: message }],
+          temperature: 0.7,
+          max_new_tokens: 512,
+        }),
       }
     );
-    const embData = await embResponse.json();
-    const embedding = embData[0]?.embedding;
-
-    // 2️⃣ Rechercher le contexte dans Pinecone
-    let context = [];
-    if (embedding) {
-      context = await queryVectorDB(embedding, 3); // top 3 vecteurs similaires
-    }
-
-    // 3️⃣ Préparer le prompt pour HuggingFace
-    const promptWithContext = `
-Voici des informations utiles tirées de la mémoire de l'IA :
-${context.join("\n")}
-Utilisateur : ${message}
-Réponds de manière claire et précise :
-`;
-
-    // 4️⃣ Appel HuggingFace
-    const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "meta-llama/Meta-Llama-3-8B-Instruct",
-        messages: [{ role: "user", content: promptWithContext }],
-        temperature: 0.7,
-        max_new_tokens: 512,
-      }),
-    });
 
     const data = await response.json();
-    if (!response.ok) return res.status(500).json({ text: `Erreur IA provider : ${JSON.stringify(data)}` });
+
+    if (!response.ok) {
+      return res.status(500).json({ text: `Erreur IA provider : ${JSON.stringify(data)}` });
+    }
 
     const text = data?.choices?.[0]?.message?.content?.trim() || "🤖 Pas de réponse du modèle.";
-
-    // 5️⃣ Ajouter la Q/R dans Pinecone
-    if (embedding) await addToVectorDB(`msg-${Date.now()}`, message + " | " + text, embedding);
-
     return res.status(200).json({ text });
+
   } catch (err) {
     return res.status(500).json({ text: `Erreur serveur : ${err.message}` });
   }
 }
-

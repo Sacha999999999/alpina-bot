@@ -1,15 +1,15 @@
 // /api/chat.js
-import { PineconeClient } from "@pinecone-database/pinecone";
+import pkg from "@pinecone-database/pinecone";
+const { PineconeClient } = pkg;
 
 const pinecone = new PineconeClient();
-const indexName = process.env.PINECONE_INDEX_NAME; // ex: "alpina-memory"
+const indexName = process.env.PINECONE_INDEX_NAME;
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 
-// 🔹 Initialisation Pinecone
+// Initialisation Pinecone dans une fonction async
 async function initPinecone() {
   await pinecone.init({
     apiKey: process.env.PINECONE_API_KEY,
-    // environment n’est plus obligatoire sur les dernières versions
   });
   return pinecone.Index(indexName);
 }
@@ -40,30 +40,29 @@ export default async function handler(req, res) {
   console.log("📩 Message reçu :", message);
 
   try {
-    // 1️⃣ Initialiser l’index Pinecone
     const index = await initPinecone();
 
-    // 2️⃣ Créer l’embedding via HuggingFace (router URL)
     console.log("🔹 Création embedding...");
-    const embResp = await fetch("https://router.huggingface.co/embeddings/meta-llama/llama-text-embed-v2", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ inputs: message }),
-    });
+    const embResp = await fetch(
+      "https://router.huggingface.co/embeddings/meta-llama/llama-text-embed-v2",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs: message }),
+      }
+    );
 
     const embData = await embResp.json();
     const embedding = embData?.[0]?.embedding;
 
     if (!embedding) console.warn("⚠️ Embedding non disponible, Pinecone ignoré.");
 
-    // 3️⃣ Rechercher contexte dans Pinecone
     let context = [];
     if (embedding) {
       context = await queryVectorDB(index, embedding, 3);
       console.log("🔹 Contexte trouvé :", context);
     }
 
-    // 4️⃣ Préparer le prompt pour HuggingFace
     const promptWithContext = `
 Voici des informations utiles tirées de la mémoire de l'IA :
 ${context.join("\n")}
@@ -71,7 +70,6 @@ Utilisateur : ${message}
 Réponds de manière claire et précise :
 `;
 
-    // 5️⃣ Appel modèle Llama sur HuggingFace
     console.log("🔹 Appel modèle Llama...");
     const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
       method: "POST",
@@ -89,10 +87,7 @@ Réponds de manière claire et précise :
 
     console.log("✅ Texte final :", text);
 
-    // 6️⃣ Ajouter Q/R dans Pinecone si embedding ok
-    if (embedding) {
-      await addToVectorDB(index, `msg-${Date.now()}`, message + " | " + text, embedding);
-    }
+    if (embedding) await addToVectorDB(index, `msg-${Date.now()}`, message + " | " + text, embedding);
 
     return res.status(200).json({ text });
 

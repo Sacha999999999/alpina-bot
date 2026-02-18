@@ -1,12 +1,13 @@
 // /api/chat.js
-import fetch from "node-fetch"; // pour Vercel Node.js
+import fetch from "node-fetch";
 import pkg from "@pinecone-database/pinecone";
-const { createClient } = pkg;
+const { PineconeClient } = pkg; // <- corrigé, pas createClient
 
 // 🔹 Initialise Pinecone
-const pinecone = createClient({
+const pinecone = new PineconeClient();
+await pinecone.init({
   apiKey: process.env.PINECONE_API_KEY,
-  environment: process.env.PINECONE_ENVIRONMENT || undefined, // optionnel si non utilisé
+  environment: process.env.PINECONE_ENVIRONMENT || undefined, // optionnel
 });
 const index = pinecone.Index(process.env.PINECONE_INDEX_NAME);
 
@@ -52,11 +53,14 @@ export default async function handler(req, res) {
   try {
     // 1️⃣ Création embedding avec HuggingFace
     console.log("🔹 Création embedding...");
-    const embResponse = await fetch("https://router.huggingface.co/embeddings/meta-llama/llama-text-embed-v2", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ inputs: message }),
-    });
+    const embResponse = await fetch(
+      "https://router.huggingface.co/embeddings/meta-llama/llama-text-embed-v2",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs: message }),
+      }
+    );
     const embData = await embResponse.json();
     const embedding = embData[0]?.embedding;
 

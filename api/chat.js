@@ -1,28 +1,27 @@
 // /api/chat.js
-import pkg from "@pinecone-database/pinecone";
-const { PineconeClient } = pkg;
+import { createClient } from "@pinecone-database/pinecone";
 
-const pinecone = new PineconeClient();
+const pinecone = createClient({
+  apiKey: process.env.PINECONE_API_KEY,
+  environment: process.env.PINECONE_ENVIRONMENT, // exemple: "us-east1-gcp"
+});
+
 const indexName = process.env.PINECONE_INDEX_NAME;
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 
-// Initialisation Pinecone dans une fonction async
-async function initPinecone() {
-  await pinecone.init({
-    apiKey: process.env.PINECONE_API_KEY,
-  });
-  return pinecone.Index(indexName);
-}
-
-async function addToVectorDB(index, id, text, embedding) {
+// Ajouter un texte dans Pinecone
+async function addToVectorDB(id, text, embedding) {
   if (!embedding) return;
+  const index = pinecone.Index(indexName);
   await index.upsert({
     vectors: [{ id, values: embedding, metadata: { text } }],
   });
 }
 
-async function queryVectorDB(index, embedding, topK = 3) {
+// Rechercher les vecteurs proches
+async function queryVectorDB(embedding, topK = 3) {
   if (!embedding) return [];
+  const index = pinecone.Index(indexName);
   const result = await index.query({
     topK,
     vector: embedding,
@@ -40,8 +39,6 @@ export default async function handler(req, res) {
   console.log("📩 Message reçu :", message);
 
   try {
-    const index = await initPinecone();
-
     console.log("🔹 Création embedding...");
     const embResp = await fetch(
       "https://router.huggingface.co/embeddings/meta-llama/llama-text-embed-v2",
@@ -59,7 +56,7 @@ export default async function handler(req, res) {
 
     let context = [];
     if (embedding) {
-      context = await queryVectorDB(index, embedding, 3);
+      context = await queryVectorDB(embedding, 3);
       console.log("🔹 Contexte trouvé :", context);
     }
 
@@ -87,10 +84,9 @@ Réponds de manière claire et précise :
 
     console.log("✅ Texte final :", text);
 
-    if (embedding) await addToVectorDB(index, `msg-${Date.now()}`, message + " | " + text, embedding);
+    if (embedding) await addToVectorDB(`msg-${Date.now()}`, message + " | " + text, embedding);
 
     return res.status(200).json({ text });
-
   } catch (err) {
     console.error("❌ Erreur serveur :", err);
     return res.status(500).json({ text: `Erreur serveur : ${err.message}` });

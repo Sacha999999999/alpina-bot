@@ -4,10 +4,9 @@ import { Pinecone } from "@pinecone-database/pinecone";
 
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 
-// Initialise Pinecone (doc‑approved syntax)
+// Initialise Pinecone sans `environment` (correct selon le SDK)
 const pc = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
-  environment: process.env.PINECONE_ENVIRONMENT,
 });
 const index = pc.index(process.env.PINECONE_INDEX_NAME);
 
@@ -37,17 +36,17 @@ async function queryVectorDB(embedding, topK = 3) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "POST")
+  if (req.method !== "POST") {
     return res.status(405).json({ text: "Méthode non autorisée" });
+  }
 
   const { message } = req.body;
-  if (!message)
-    return res.status(400).json({ text: "Message vide" });
+  if (!message) return res.status(400).json({ text: "Message vide" });
 
   try {
     console.log("📩 Message reçu :", message);
 
-    // 1) embeddings
+    // 🧠 1️⃣ Création embedding HuggingFace
     console.log("🔹 Création embedding...");
     const embResp = await fetch(
       "https://router.huggingface.co/embeddings/meta-llama/llama-text-embed-v2",
@@ -62,26 +61,26 @@ export default async function handler(req, res) {
     );
     const embData = await embResp.json();
     const embedding = embData?.data?.[0]?.embedding;
-
     if (!embedding) {
-      console.warn("⚠️ Embedding non dispo :", embData);
+      console.warn("⚠️ Embedding non disponible :", embData);
     }
 
-    // 2) query Pinecone
+    // 🧠 2️⃣ Récupère contexte depuis Pinecone
     let context = [];
     if (embedding) {
       context = await queryVectorDB(embedding, 3);
-      console.log("🔹 Contexte :", context);
+      console.log("🔹 Contexte trouvé :", context);
     }
 
-    // 3) chat request
+    // 💬 3️⃣ Appel HuggingFace Chat
     const prompt = `
-Voici des infos utiles:
+Voici des informations utiles tirées de la mémoire de l'IA :
 ${context.join("\n")}
 Utilisateur : ${message}
-Réponds :
+Réponds de manière claire et précise :
 `;
 
+    console.log("🔹 Appel modèle HuggingFace...");
     const hfResp = await fetch(
       "https://router.huggingface.co/v1/chat/completions",
       {
@@ -109,10 +108,9 @@ Réponds :
     const text =
       hfData?.choices?.[0]?.message?.content?.trim() ||
       "🤖 Pas de réponse du modèle.";
-
     console.log("✅ Réponse :", text);
 
-    // 4) stocker
+    // 🧠 4️⃣ Stocke la Q/R dans Pinecone si embedding OK
     if (embedding) {
       await addToVectorDB(
         `msg-${Date.now()}`,

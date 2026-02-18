@@ -19,35 +19,38 @@ export default async function handler(req, res) {
   let context = [];
   let embedding = null;
 
-  /* =========================
-     1️⃣ EMBEDDING (SAFE)
-  ========================== */
-  try {
-    console.log("🔹 Création embedding...");
+/* =========================
+   1️⃣ EMBEDDING (SAFE)
+========================== */
+try {
+  console.log("🔹 Création embedding...");
 
-    const embResponse = await fetch(
-      "https://api-inference.huggingface.co/embeddings/meta-llama/llama-text-embed-v2",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ inputs: message }),
-      }
-    );
-
-    const embData = await embResponse.json();
-
-    if (embResponse.ok && embData?.data?.[0]?.embedding) {
-      embedding = embData.data[0].embedding;
-      console.log("✅ Embedding OK");
-    } else {
-      console.log("⚠️ Embedding non disponible :", embData);
+  const embResponse = await fetch(
+    "https://router.huggingface.co/v1/embeddings",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HF_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "meta-llama/llama-text-embed-v2",
+        input: message,
+      }),
     }
-  } catch (err) {
-    console.log("⚠️ Erreur embedding :", err.message);
+  );
+
+  const embData = await embResponse.json();
+
+  if (embResponse.ok && embData?.data?.[0]?.embedding) {
+    embedding = embData.data[0].embedding;
+    console.log("✅ Embedding OK");
+  } else {
+    console.log("⚠️ Embedding non disponible :", embData);
   }
+} catch (err) {
+  console.log("⚠️ Erreur embedding :", err.message);
+}
 
   /* =========================
      2️⃣ PINECONE QUERY (SAFE)

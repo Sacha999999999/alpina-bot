@@ -1,18 +1,16 @@
 import fetch from "node-fetch";
 import { Pinecone } from "@pinecone-database/pinecone";
 
-// 🔹 Variables d'environnement (à définir dans Vercel)
+// 🔹 Variables d'environnement (à configurer dans Vercel)
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
 const index = pc.index(process.env.PINECONE_INDEX_NAME);
 
-// ⚠️ Vérifie que cette dimension correspond exactement à ton index Pinecone
+// ⚠️ Dimension exacte de ton index Pinecone
 const EXPECTED_DIMENSION = 1024;
 
 /**
- * Crée un embedding à partir d'un texte via HuggingFace
- * @param {string} text - texte à transformer en vecteur
- * @returns {Array<number>} embedding
+ * Crée un embedding depuis un texte via HuggingFace
  */
 async function createEmbedding(text) {
   const resp = await fetch(
@@ -34,65 +32,52 @@ async function createEmbedding(text) {
 
   if (!Array.isArray(embedding)) throw new Error("Embedding invalide");
   if (embedding.length !== EXPECTED_DIMENSION)
-    throw new Error(
-      `Dimension incorrecte: ${embedding.length} au lieu de ${EXPECTED_DIMENSION}`
-    );
+    throw new Error(`Dimension incorrecte: ${embedding.length} au lieu de ${EXPECTED_DIMENSION}`);
 
   return embedding;
 }
 
 /**
- * 🔹 Blocs de texte test concret pour Pinecone
- * Tu peux remplacer ces blocs par tes 200-300 lignes
+ * 🔹 Blocs de texte de test
  */
 const TEST_TEXT_BLOCKS = [
   `Bloc test 1 : Ceci est un texte banal pour vérifier l'injection dans Pinecone.
-Ligne 2 : Encore une ligne pour simuler un vrai bloc.
-Ligne 3 : Une autre ligne d'exemple.
-Ligne 4 : Et encore une ligne.
-Ligne 5 : Fin du bloc test 1.`,
+Ligne 2 : Exemple de contenu.
+Ligne 3 : Encore une ligne.
+Ligne 4 : Fin du bloc 1.`,
 
-  `Bloc test 2 : Deuxième exemple pour tester l'injection.
-Ligne 2 : Ajout de contenu supplémentaire.
-Ligne 3 : Vérification du texte dans metadata.
-Ligne 4 : Toujours un exemple.
-Ligne 5 : Fin du bloc test 2.`,
+  `Bloc test 2 : Deuxième exemple pour test.
+Ligne 2 : Contenu additionnel.
+Ligne 3 : Fin du bloc 2.`,
 
-  `Bloc test 3 : Troisième bloc pour compléter le test.
-Ligne 2 : Simulation de texte réel.
-Ligne 3 : Ligne d'exemple.
-Ligne 4 : Dernière ligne avant fin du bloc.
-Ligne 5 : Fin du bloc test 3.`
+  `Bloc test 3 : Troisième bloc pour test.
+Ligne 2 : Contenu final.
+Ligne 3 : Fin du bloc 3.`
 ];
 
 /**
- * 🔹 Route API Vercel pour injecter les blocs dans Pinecone
- * Nom du fichier : api/inject.js → URL après déploiement : /api/inject
- * 
- * Tu n’as pas besoin d’envoyer de body pour ce test
+ * Route API Vercel : /api/inject
  */
 export default async function handler(req, res) {
   try {
     for (let i = 0; i < TEST_TEXT_BLOCKS.length; i++) {
       const text = TEST_TEXT_BLOCKS[i];
 
-      // 🔹 Création embedding réel
+      // 🔹 Création de l'embedding
       const embedding = await createEmbedding(text);
 
-      // 🔹 Injection dans Pinecone avec ID unique et métadonnées
-      await index.upsert([
-        {
-          id: `inject-test-${Date.now()}-${i}`, // ID unique
-          values: embedding,                     // vecteur embedding
-          metadata: {
-            text,                                // texte complet du bloc
-            source: "CGA-2026",                  // source pour filtrer plus tard
-            createdAt: new Date().toISOString()  // date ISO
-          },
+      // 🔹 Injection dans Pinecone
+      await index.upsert([{
+        id: `inject-test-${Date.now()}-${i}`,
+        values: embedding,
+        metadata: {
+          text,                      // texte complet du bloc
+          source: "CGA-2026",        // source pour filtrer
+          createdAt: new Date().toISOString()
         },
-      ]);
+      }]);
 
-      console.log(`✅ Bloc ${i} injecté dans Pinecone avec source "CGA-2026"`);
+      console.log(`✅ Bloc ${i} injecté avec source "CGA-2026"`);
     }
 
     return res.status(200).json({
@@ -102,7 +87,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("❌ Inject test error:", err);
+    console.error("❌ Erreur d'injection:", err);
     return res.status(500).json({ error: err.message });
   }
 }

@@ -1,34 +1,36 @@
 import fetch from "node-fetch";
 import { Pinecone } from "@pinecone-database/pinecone";
 
-// 🔹 Variables d'environnement (à configurer dans Vercel)
+// 🔹 Variables d'environnement (Vercel)
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
 const index = pc.index(process.env.PINECONE_INDEX_NAME);
 
-// ⚠️ Dimension exacte de ton index Pinecone
 const EXPECTED_DIMENSION = 1024;
 
 /**
- * Crée un embedding depuis un texte via HuggingFace
+ * Crée un embedding via le nouveau HuggingFace Router
  */
 async function createEmbedding(text) {
   const resp = await fetch(
-    "https://api-inference.huggingface.co/embeddings/meta-llama/llama-text-embed-v2",
+    "https://router.huggingface.co/api/embeddings",
     {
       method: "POST",
       headers: {
         Authorization: `Bearer ${HF_TOKEN}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ inputs: text }),
+      body: JSON.stringify({
+        model: "meta-llama/llama-text-embed-v2",
+        input: text
+      }),
     }
   );
 
   if (!resp.ok) throw new Error(await resp.text());
 
   const data = await resp.json();
-  const embedding = data?.[0]?.embedding;
+  const embedding = data?.embedding; // HuggingFace Router renvoie directement embedding
 
   if (!Array.isArray(embedding)) throw new Error("Embedding invalide");
   if (embedding.length !== EXPECTED_DIMENSION)
@@ -37,47 +39,42 @@ async function createEmbedding(text) {
   return embedding;
 }
 
-/**
- * 🔹 Blocs de texte de test
- */
+// 🔹 Blocs de test
 const TEST_TEXT_BLOCKS = [
   `Bloc test 1 : Ceci est un texte banal pour vérifier l'injection dans Pinecone.
-Ligne 2 : Exemple de contenu.
-Ligne 3 : Encore une ligne.
-Ligne 4 : Fin du bloc 1.`,
+Ligne 2 : Exemple.
+Ligne 3 : Fin bloc 1.`,
 
-  `Bloc test 2 : Deuxième exemple pour test.
-Ligne 2 : Contenu additionnel.
-Ligne 3 : Fin du bloc 2.`,
+  `Bloc test 2 : Deuxième exemple.
+Ligne 2 : Exemple supplémentaire.
+Ligne 3 : Fin bloc 2.`,
 
-  `Bloc test 3 : Troisième bloc pour test.
-Ligne 2 : Contenu final.
-Ligne 3 : Fin du bloc 3.`
+  `Bloc test 3 : Troisième bloc.
+Ligne 2 : Exemple final.
+Ligne 3 : Fin bloc 3.`
 ];
 
 /**
- * Route API Vercel : /api/inject
+ * Route API : /api/inject
  */
 export default async function handler(req, res) {
   try {
     for (let i = 0; i < TEST_TEXT_BLOCKS.length; i++) {
       const text = TEST_TEXT_BLOCKS[i];
 
-      // 🔹 Création de l'embedding
       const embedding = await createEmbedding(text);
 
-      // 🔹 Injection dans Pinecone
       await index.upsert([{
         id: `inject-test-${Date.now()}-${i}`,
         values: embedding,
         metadata: {
-          text,                      // texte complet du bloc
-          source: "CGA-2026",        // source pour filtrer
+          text,
+          source: "CGA-2026",
           createdAt: new Date().toISOString()
         },
       }]);
 
-      console.log(`✅ Bloc ${i} injecté avec source "CGA-2026"`);
+      console.log(`✅ Bloc ${i} injecté dans Pinecone avec source "CGA-2026"`);
     }
 
     return res.status(200).json({
@@ -87,7 +84,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("❌ Erreur d'injection:", err);
+    console.error("❌ Inject test error:", err);
     return res.status(500).json({ error: err.message });
   }
 }

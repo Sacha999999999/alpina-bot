@@ -4,7 +4,7 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 
 export default async function handler(req, res) {
   try {
-    const resp = await fetch("https://router.huggingface.co/v1/embeddings"", {
+    const resp = await fetch("https://api-inference.huggingface.co/v2/embeddings", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${HF_TOKEN}`,
@@ -27,4 +27,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-

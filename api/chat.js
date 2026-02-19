@@ -2,16 +2,33 @@
 import fetch from "node-fetch";
 import { Pinecone } from "@pinecone-database/pinecone";
 
-// ⚠️ Variables d’environnement requises
+// ⚠️ Variables d’environnement
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME;
 
 // 🔹 Initialise Pinecone
 const pc = new Pinecone({ apiKey: PINECONE_API_KEY });
-const index = pc.index(PINECONE_INDEX_NAME);
+let index;
 
-// 🧠 Upsert dans Pinecone
+// 🧠 Assure l'index existe et a la bonne dimension
+async function initIndex(dim) {
+  try {
+    const existingIndexes = await pc.listIndexes();
+    if (!existingIndexes.includes(PINECONE_INDEX_NAME)) {
+      console.log(`⚡ Création de l’index Pinecone: ${PINECONE_INDEX_NAME} (${dim}D)`);
+      await pc.createIndex({ name: PINECONE_INDEX_NAME, dimension: dim });
+      // attendre quelques secondes pour que l'index soit prêt
+      await new Promise(r => setTimeout(r, 5000));
+    }
+    index = pc.index(PINECONE_INDEX_NAME);
+  } catch (err) {
+    console.error("❌ Erreur initIndex:", err.message);
+    throw err;
+  }
+}
+
+// 🧠 Upsert
 async function addToVectorDB(id, text, embedding) {
   if (!embedding || !Array.isArray(embedding) || !embedding.every(n => typeof n === "number")) {
     console.warn("⚠️ Embedding non valide, skip upsert:", embedding);
@@ -27,7 +44,7 @@ async function addToVectorDB(id, text, embedding) {
   }
 }
 
-// 🧠 Query Pinecone
+// 🧠 Query
 async function queryVectorDB(embedding, topK = 3) {
   if (!embedding || !Array.isArray(embedding)) return [];
   try {
@@ -57,15 +74,11 @@ export default async function handler(req, res) {
     // ===============================
     // 1) Création Embedding HF
     // ===============================
-    console.log("🔹 Création embedding…");
     const embResponse = await fetch(
       "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction",
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
         body: JSON.stringify({ inputs: message }),
       }
     );
@@ -77,14 +90,18 @@ export default async function handler(req, res) {
     }
 
     const embData = await embResponse.json();
-    const embedding = Array.isArray(embData) && Array.isArray(embData[0])
-      ? embData[0]
-      : embData;
+    // ✅ HF renvoie souvent [[..]], on veut un tableau 1D
+    const embedding = Array.isArray(embData) && Array.isArray(embData[0]) ? embData[0] : embData;
 
     if (!embedding || !Array.isArray(embedding) || !embedding.every(n => typeof n === "number")) {
       console.error("❌ Embedding invalide reçu:", embData);
       return res.status(500).json({ text: "Erreur: embedding invalide." });
     }
+
+    // ===============================
+    // 1b) Init index Pinecone
+    // ===============================
+    if (!index) await initIndex(embedding.length);
 
     // ===============================
     // 2) Query Pinecone
@@ -102,23 +119,16 @@ Utilisateur : ${message}
 Réponds clairement :
 `;
 
-    console.log("🔹 Appel Chat HF…");
-    const chatResp = await fetch(
-      "https://router.huggingface.co/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "meta-llama/Meta-Llama-3-8B-Instruct",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.7,
-          max_new_tokens: 512,
-        }),
-      }
-    );
+    const chatResp = await fetch("https://router.huggingface.co/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "meta-llama/Meta-Llama-3-8B-Instruct",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_new_tokens: 512,
+      }),
+    });
 
     if (!chatResp.ok) {
       const errText = await chatResp.text();
@@ -127,8 +137,7 @@ Réponds clairement :
     }
 
     const chatData = await chatResp.json();
-    const text =
-      chatData?.choices?.[0]?.message?.content?.trim() || "🤖 Pas de réponse du modèle.";
+    const text = chatData?.choices?.[0]?.message?.content?.trim() || "🤖 Pas de réponse du modèle.";
 
     console.log("✅ Réponse:", text);
 

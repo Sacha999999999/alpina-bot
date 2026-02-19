@@ -8,12 +8,15 @@ const index = pc.index("alpina-memory");
 
 export default async function handler(req, res) {
   try {
-    console.log("🚀 TEST PINECONE START");
+    console.log("🚀 TEST VECTOR 1024");
+
+    // vecteur 1024 rempli de 0.1
+    const vector = Array(1024).fill(0.1);
 
     await index.upsert([
       {
-        id: "test-id-1",
-        text: "Ceci est un test mémoire Pinecone",
+        id: "vector-test-1",
+        values: vector,
         metadata: { test: true }
       }
     ]);
@@ -33,4 +36,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-

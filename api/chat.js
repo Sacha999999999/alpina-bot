@@ -37,6 +37,34 @@ async function queryVectorDB(embedding, topK = 3) {
   }
 }
 
+// 🔹 Fonction pour créer un embedding HF réel (dimension compatible avec ton index 1024)
+async function getHFEmbedding(text) {
+  const resp = await fetch(
+    "https://router.huggingface.co/hf-inference/models/meta-llama/llama-text-embed-v2/pipeline/feature-extraction",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HF_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ inputs: text }),
+    }
+  );
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error("HF Embedding error: " + errText);
+  }
+
+  const data = await resp.json();
+  const embedding = Array.isArray(data) ? data[0] : data?.[0];
+
+  if (!Array.isArray(embedding) || embedding.length !== 1024)
+    throw new Error("Embedding HF invalide ou mauvaise dimension");
+
+  return embedding;
+}
+
 // 🔹 Handler principal de l'API
 export default async function handler(req, res) {
   if (req.method !== "POST") 
@@ -48,35 +76,8 @@ export default async function handler(req, res) {
   console.log("📩 Message reçu:", message);
 
   try {
-    // 🟡 Embedding via Chat Router — appel qui marche pour le chat
-    const embResp = await fetch("https://router.huggingface.co/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${HF_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "meta-llama/Meta-Llama-3-8B-Instruct",
-        messages: [
-          { role: "system", content: "Transforme ce texte en vecteurs pour RAG." },
-          { role: "user", content: message }
-        ],
-        temperature: 0.0,
-        max_new_tokens: 1 // juste pour récupérer un texte minimal comme proxy
-      }),
-    });
-
-    if (!embResp.ok) {
-      const errText = await embResp.text();
-      throw new Error("HF Embedding via Chat Router failed: " + errText);
-    }
-
-    // 🟡 Création d’un embedding proxy compatible avec Pinecone (dimension 1024)
-    // Ici on génère un vecteur aléatoire de 1024 valeurs pour être sûr que l’index accepte l’upsert
-    const embedding = Array(1024).fill(0).map(() => Math.random());
-
-    if (!Array.isArray(embedding) || embedding.length !== 1024)
-      throw new Error("Embedding proxy non disponible ou mauvaise dimension");
+    // 🟡 Génération du vrai embedding HF
+    const embedding = await getHFEmbedding(message);
 
     // 🟡 Recherche du contexte pertinent dans Pinecone
     const context = await queryVectorDB(embedding, 3);
@@ -116,7 +117,7 @@ Réponds clairement :
 
     console.log("✅ Réponse finale:", text);
 
-    // 🟢 Sauvegarde du message + réponse dans Pinecone
+    // 🟢 Sauvegarde du message + réponse dans Pinecone avec vrai embedding
     await addToVectorDB(`msg-${Date.now()}`, `${message} | ${text}`, embedding);
 
     // 🔹 Retour de la réponse au client

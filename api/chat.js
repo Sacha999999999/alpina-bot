@@ -70,10 +70,12 @@ export default async function handler(req, res) {
 
     // 🟡 On récupère **le texte du message** comme embedding proxy
     // (c’est un *truc correct qui aura toujours du texte à indexer)
-    const embChatData = await embResp.json();
-    const embedding = embChatData?.choices?.[0]?.message?.content
-      ? embChatData.choices[0].message.content.split(" ").map((_, i) => Math.random())
-      : [];
+   // 🟡 Embedding proxy compatible 1024
+const embChatData = await embResp.json();
+const embedding = Array(1024).fill(0).map(() => Math.random()); // 1024 dimensions
+
+if (!Array.isArray(embedding) || embedding.length !== 1024)
+  throw new Error("Embedding proxy non disponible ou mauvaise dimension");
 
     // ❗ On sait qu’on a **du texte récupéré**, donc on peut indexer
     if (!Array.isArray(embedding) || !embedding.length)

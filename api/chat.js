@@ -1,12 +1,14 @@
 import fetch from "node-fetch";
-import { PineconeClient } from "@pinecone-database/pinecone";
+import pkg from "@pinecone-database/pinecone";
+
+const { PineconeClient } = pkg;
 
 // 🔹 Variables d'environnement
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME;
 
-// 🔹 Initialise Pinecone (2026)
+// 🔹 Initialise Pinecone (CommonJS compatible)
 const pinecone = new PineconeClient();
 await pinecone.init({ apiKey: PINECONE_API_KEY });
 const index = pinecone.Index(PINECONE_INDEX_NAME);

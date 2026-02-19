@@ -119,7 +119,8 @@ Utilisateur : ${message}
 Réponds clairement :
 `;
 
-    const chatResp = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", {
+    const chatResp = await fetch("https://router.huggingface.co/v1/chat/completions"
+, {
       method: "POST",
       headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
       body: JSON.stringify({ inputs: prompt, parameters: { max_new_tokens: 512, temperature: 0.7 } }),

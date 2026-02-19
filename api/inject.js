@@ -1,16 +1,16 @@
 import fetch from "node-fetch";
 import { Pinecone } from "@pinecone-database/pinecone";
 
-// 🔹 Variables d'environnement
+// 🔹 Variables d'environnement (à définir dans Vercel)
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
 const index = pc.index(process.env.PINECONE_INDEX_NAME);
 
-// ⚠️ Dimension exacte de ton index Pinecone
+// ⚠️ Vérifie que cette dimension correspond exactement à ton index Pinecone
 const EXPECTED_DIMENSION = 1024;
 
 /**
- * Crée un embedding depuis un texte via HuggingFace
+ * Crée un embedding à partir d'un texte via HuggingFace
  * @param {string} text - texte à transformer en vecteur
  * @returns {Array<number>} embedding
  */
@@ -34,14 +34,16 @@ async function createEmbedding(text) {
 
   if (!Array.isArray(embedding)) throw new Error("Embedding invalide");
   if (embedding.length !== EXPECTED_DIMENSION)
-    throw new Error(`Dimension incorrecte: ${embedding.length} au lieu de ${EXPECTED_DIMENSION}`);
+    throw new Error(
+      `Dimension incorrecte: ${embedding.length} au lieu de ${EXPECTED_DIMENSION}`
+    );
 
   return embedding;
 }
 
 /**
- * 🔹 Texte de test réel intégré
- * Tu peux le remplacer par n'importe quel texte de 200-300 lignes
+ * 🔹 Blocs de texte test concret pour Pinecone
+ * Tu peux remplacer ces blocs par tes 200-300 lignes
  */
 const TEST_TEXT_BLOCKS = [
   `Bloc test 1 : Ceci est un texte banal pour vérifier l'injection dans Pinecone.
@@ -64,26 +66,28 @@ Ligne 5 : Fin du bloc test 3.`
 ];
 
 /**
- * Route API pour injecter les blocs dans Pinecone
- * Tu n'as pas besoin d'envoyer de body si tu veux juste tester le texte intégré
+ * 🔹 Route API Vercel pour injecter les blocs dans Pinecone
+ * Nom du fichier : api/inject.js → URL après déploiement : /api/inject
+ * 
+ * Tu n’as pas besoin d’envoyer de body pour ce test
  */
 export default async function handler(req, res) {
   try {
     for (let i = 0; i < TEST_TEXT_BLOCKS.length; i++) {
       const text = TEST_TEXT_BLOCKS[i];
 
-      // 🔹 Création de l'embedding réel
+      // 🔹 Création embedding réel
       const embedding = await createEmbedding(text);
 
       // 🔹 Injection dans Pinecone avec ID unique et métadonnées
       await index.upsert([
         {
-          id: `inject-test-${Date.now()}-${i}`,
-          values: embedding,
+          id: `inject-test-${Date.now()}-${i}`, // ID unique
+          values: embedding,                     // vecteur embedding
           metadata: {
-            text,                        // le texte complet du bloc
-            source: "CGA-2026",          // source pour filtrer les vecteurs plus tard
-            createdAt: new Date().toISOString(), // date ISO
+            text,                                // texte complet du bloc
+            source: "CGA-2026",                  // source pour filtrer plus tard
+            createdAt: new Date().toISOString()  // date ISO
           },
         },
       ]);

@@ -1,16 +1,16 @@
 import fetch from "node-fetch";
 import { Pinecone } from "@pinecone-database/pinecone";
 
-// Variables d'environnement
+// Variables d'environnement Vercel
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
 const index = pc.index(process.env.PINECONE_INDEX_NAME);
 const EXPECTED_DIMENSION = 1024;
 
-// Crée un embedding via HuggingFace Router 2026
+// 🔹 Crée un embedding via HuggingFace Router 2026
 async function createEmbedding(text) {
   const resp = await fetch(
-    "https://api-inference.huggingface.co/models/meta-llama/llama-text-embed-v2",
+    "https://router.huggingface.co/models/meta-llama/llama-text-embed-v2",
     {
       method: "POST",
       headers: {
@@ -24,7 +24,7 @@ async function createEmbedding(text) {
   if (!resp.ok) throw new Error(await resp.text());
 
   const data = await resp.json();
-  const embedding = data?.embedding || data?.[0]?.embedding;
+  const embedding = data?.embedding;
 
   if (!Array.isArray(embedding)) throw new Error("Embedding invalide");
   if (embedding.length !== EXPECTED_DIMENSION)
@@ -33,20 +33,14 @@ async function createEmbedding(text) {
   return embedding;
 }
 
-// Blocs de test
+// 🔹 Blocs de test
 const TEST_TEXT_BLOCKS = [
-  `Bloc test 1 : Vérification injection Pinecone.
-Ligne 2 : Exemple.
-Ligne 3 : Fin bloc 1.`,
-  `Bloc test 2 : Deuxième test.
-Ligne 2 : Exemple supplémentaire.
-Ligne 3 : Fin bloc 2.`,
-  `Bloc test 3 : Troisième test.
-Ligne 2 : Exemple final.
-Ligne 3 : Fin bloc 3.`
+  "Bloc test 1 : Vérification Pinecone. Ligne 2. Ligne 3.",
+  "Bloc test 2 : Deuxième test. Ligne 2. Ligne 3.",
+  "Bloc test 3 : Troisième test. Ligne 2. Ligne 3."
 ];
 
-// Endpoint API Vercel
+// 🔹 Endpoint API Vercel
 export default async function handler(req, res) {
   try {
     for (let i = 0; i < TEST_TEXT_BLOCKS.length; i++) {
@@ -64,7 +58,7 @@ export default async function handler(req, res) {
         }
       }]);
 
-      console.log(`✅ Bloc ${i} injecté dans Pinecone avec source "CGA-2026"`);
+      console.log(`✅ Bloc ${i} injecté dans Pinecone`);
     }
 
     return res.status(200).json({
@@ -78,4 +72,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-

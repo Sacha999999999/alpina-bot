@@ -1,14 +1,12 @@
 import fetch from "node-fetch";
-import pkg from "@pinecone-database/pinecone";
-
-const { PineconeClient } = pkg;
+import { PineconeClient } from "@pinecone-database/pinecone";
 
 // 🔹 Variables d'environnement
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME;
 
-// 🔹 Initialise Pinecone (nouvelle méthode 2026)
+// 🔹 Initialise Pinecone (2026)
 const pinecone = new PineconeClient();
 await pinecone.init({ apiKey: PINECONE_API_KEY });
 const index = pinecone.Index(PINECONE_INDEX_NAME);
@@ -33,7 +31,7 @@ async function queryVectorDB(embedding, topK = 3) {
       vector: embedding,
       includeMetadata: true,
     });
-    return result.matches.map(m => m.metadata.text);
+    return result.matches.map((m) => m.metadata.text);
   } catch (err) {
     console.error("❌ Pinecone query error:", err.message);
     return [];
@@ -56,10 +54,14 @@ export default async function handler(req, res) {
       "https://router.huggingface.co/hf-inference/models/meta-llama/llama-text-embed-v2/pipeline/feature-extraction",
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${HF_TOKEN}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ inputs: message }),
       }
     );
+
     if (!embResp.ok) throw new Error(await embResp.text());
     const embData = await embResp.json();
     const embedding = Array.isArray(embData) ? embData[0] : embData?.[0];
@@ -69,7 +71,7 @@ export default async function handler(req, res) {
     // 2️⃣ Query Pinecone top-k
     const context = await queryVectorDB(embedding, 3);
 
-    // 3️⃣ Préparer prompt
+    // 3️⃣ Préparer prompt Chat
     const prompt = `
 Voici des informations utiles tirées de la mémoire :
 ${context.join("\n")}
@@ -78,19 +80,16 @@ Réponds clairement :
 `;
 
     // 4️⃣ Appel HF Chat Router
-    const chatResp = await fetch(
-      "https://router.huggingface.co/v1/chat/completions",
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "meta-llama/Meta-Llama-3-8B-Instruct",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.7,
-          max_new_tokens: 512,
-        }),
-      }
-    );
+    const chatResp = await fetch("https://router.huggingface.co/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "meta-llama/Meta-Llama-3-8B-Instruct",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_new_tokens: 512,
+      }),
+    });
 
     const chatData = await chatResp.json();
     const text =

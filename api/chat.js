@@ -7,12 +7,16 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME;
 
-// 🔹 Initialise Pinecone (seule propriété : apiKey)
+// 🔹 Initialise Pinecone
 const pc = new Pinecone({ apiKey: PINECONE_API_KEY });
 const index = pc.index(PINECONE_INDEX_NAME);
 
 // 🧠 Upsert dans Pinecone
 async function addToVectorDB(id, text, embedding) {
+  if (!embedding || !Array.isArray(embedding) || !embedding.every(n => typeof n === "number")) {
+    console.warn("⚠️ Embedding non valide, skip upsert:", embedding);
+    return;
+  }
   try {
     await index.upsert({
       vectors: [{ id, values: embedding, metadata: { text } }],
@@ -25,6 +29,7 @@ async function addToVectorDB(id, text, embedding) {
 
 // 🧠 Query Pinecone
 async function queryVectorDB(embedding, topK = 3) {
+  if (!embedding || !Array.isArray(embedding)) return [];
   try {
     const result = await index.query({
       topK,
@@ -38,6 +43,7 @@ async function queryVectorDB(embedding, topK = 3) {
   }
 }
 
+// 🔹 Handler API
 export default async function handler(req, res) {
   if (req.method !== "POST")
     return res.status(405).json({ text: "Méthode non autorisée" });
@@ -49,7 +55,7 @@ export default async function handler(req, res) {
     console.log("📩 Message reçu:", message);
 
     // ===============================
-    // 1) Embeddings HF (valid endpoint)
+    // 1) Création Embedding HF
     // ===============================
     console.log("🔹 Création embedding…");
     const embResponse = await fetch(
@@ -67,29 +73,27 @@ export default async function handler(req, res) {
     if (!embResponse.ok) {
       const errText = await embResponse.text();
       console.error("❌ HF Embedding error:", errText);
-      return res.status(500).json({
-        text: `Erreur Embedding HF: ${errText}`
-      });
+      return res.status(500).json({ text: `Erreur Embedding HF: ${errText}` });
     }
 
     const embData = await embResponse.json();
-    // l’embedding est un vecteur 1D
-    const embedding = Array.isArray(embData) ? embData[0] : embData?.[0];
-    if (!Array.isArray(embedding)) {
-      console.warn("⚠️ Embedding non valide:", embData);
+    const embedding = Array.isArray(embData) && Array.isArray(embData[0])
+      ? embData[0]
+      : embData;
+
+    if (!embedding || !Array.isArray(embedding) || !embedding.every(n => typeof n === "number")) {
+      console.error("❌ Embedding invalide reçu:", embData);
+      return res.status(500).json({ text: "Erreur: embedding invalide." });
     }
 
     // ===============================
     // 2) Query Pinecone
     // ===============================
-    let context = [];
-    if (Array.isArray(embedding)) {
-      context = await queryVectorDB(embedding, 3);
-      console.log("🔹 Contexte Pinecone:", context);
-    }
+    const context = await queryVectorDB(embedding, 3);
+    if (context.length) console.log("🔹 Contexte Pinecone:", context);
 
     // ===============================
-    // 3) HF Chat
+    // 3) Chat HF
     // ===============================
     const prompt = `
 Voici des informations utiles tirées de la mémoire :
@@ -119,34 +123,24 @@ Réponds clairement :
     if (!chatResp.ok) {
       const errText = await chatResp.text();
       console.error("❌ HF Chat error:", errText);
-      return res
-        .status(500)
-        .json({ text: `Erreur Chat HF: ${errText}` });
+      return res.status(500).json({ text: `Erreur Chat HF: ${errText}` });
     }
 
     const chatData = await chatResp.json();
     const text =
-      chatData?.choices?.[0]?.message?.content?.trim() ||
-      "🤖 Pas de réponse du modèle.";
+      chatData?.choices?.[0]?.message?.content?.trim() || "🤖 Pas de réponse du modèle.";
 
     console.log("✅ Réponse:", text);
 
     // ===============================
-    // 4) Stocker dans Pinecone
+    // 4) Upsert Pinecone
     // ===============================
-    if (Array.isArray(embedding)) {
-      await addToVectorDB(
-        `msg-${Date.now()}`,
-        `${message} | ${text}`,
-        embedding
-      );
-    }
+    await addToVectorDB(`msg-${Date.now()}`, `${message} | ${text}`, embedding);
 
     return res.status(200).json({ text });
   } catch (err) {
     console.error("❌ Erreur serveur:", err);
-    return res
-      .status(500)
-      .json({ text: `Erreur serveur: ${err.message}` });
+    return res.status(500).json({ text: `Erreur serveur: ${err.message}` });
   }
 }
+

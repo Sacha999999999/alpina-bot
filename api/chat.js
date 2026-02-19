@@ -74,14 +74,15 @@ export default async function handler(req, res) {
     // ===============================
     // 1) Création Embedding HF
     // ===============================
-    const embResponse = await fetch(
-      "https://api-inference.huggingface.co/models/tiiuae/llama-2-7b-hf", // ← endpoint correct embeddings
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ inputs: message }),
-      }
-    );
+const embResponse = await fetch(
+  "https://router.huggingface.co/hf-inference/models/tiiuae/llama-text-embed-v2/pipeline/feature-extraction",
+  {
+    method: "POST",
+    headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ inputs: message }),
+  }
+);
+
 
     if (!embResponse.ok) {
       const errText = await embResponse.text();

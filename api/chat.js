@@ -13,13 +13,21 @@ const index = pc.index(PINECONE_INDEX_NAME);
 async function addToVectorDB(id, text, embedding) {
   try {
     await index.upsert([
-      { id, values: embedding, metadata: { text } }
+      { 
+        id, 
+        values: embedding, 
+        metadata: { 
+          text,
+          createdAt: new Date().toISOString() // 🗓️ ajout de la date ISO
+        } 
+      }
     ]);
     console.log("✅ Upsert OK:", id);
   } catch (err) {
     console.error("❌ Pinecone upsert error:", err.message);
   }
 }
+
 
 async function queryVectorDB(embedding, topK = 3) {
   try {

@@ -10,7 +10,7 @@ async function testEmbedding() {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "meta-llama/Llama-2-7b-hf",
+      model: "meta-llama/Llama-2-7b-hf", // le modèle sûr
       input: "Bonjour, test embeddings"
     }),
   });

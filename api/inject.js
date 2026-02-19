@@ -40,43 +40,34 @@ async function createEmbedding(text) {
 }
 
 /**
- * Exemple réel de texte à injecter dans Pinecone
- * Ici, 3 blocs pour tester. Chaque bloc pourrait contenir 200-300 lignes.
+ * 🔹 Texte de test réel intégré
+ * Tu peux le remplacer par n'importe quel texte de 200-300 lignes
  */
 const TEST_TEXT_BLOCKS = [
-  `Bloc 1 - Exemple de texte banal pour test.
-Ligne 2 : juste un exemple.
-Ligne 3 : encore une ligne.
-Ligne 4 : texte supplémentaire.
-Ligne 5 : fin du bloc 1.`,
+  `Bloc test 1 : Ceci est un texte banal pour vérifier l'injection dans Pinecone.
+Ligne 2 : Encore une ligne pour simuler un vrai bloc.
+Ligne 3 : Une autre ligne d'exemple.
+Ligne 4 : Et encore une ligne.
+Ligne 5 : Fin du bloc test 1.`,
 
-  `Bloc 2 - Deuxième exemple de texte pour injection.
-Ligne 2 : texte supplémentaire.
-Ligne 3 : test de Pinecone.
-Ligne 4 : vérification de l'injection.
-Ligne 5 : fin du bloc 2.`,
+  `Bloc test 2 : Deuxième exemple pour tester l'injection.
+Ligne 2 : Ajout de contenu supplémentaire.
+Ligne 3 : Vérification du texte dans metadata.
+Ligne 4 : Toujours un exemple.
+Ligne 5 : Fin du bloc test 2.`,
 
-  `Bloc 3 - Troisième bloc de test.
-Ligne 2 : pour vérifier le fonctionnement.
-Ligne 3 : texte d'exemple.
-Ligne 4 : dernière ligne du test.
-Ligne 5 : fin du bloc 3.`
+  `Bloc test 3 : Troisième bloc pour compléter le test.
+Ligne 2 : Simulation de texte réel.
+Ligne 3 : Ligne d'exemple.
+Ligne 4 : Dernière ligne avant fin du bloc.
+Ligne 5 : Fin du bloc test 3.`
 ];
 
 /**
  * Route API pour injecter les blocs dans Pinecone
- * POST body JSON attendu (optionnel) :
- * {
- *   "source": "CGA-2026" // nom de la source pour les métadonnées
- * }
+ * Tu n'as pas besoin d'envoyer de body si tu veux juste tester le texte intégré
  */
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Méthode non autorisée" });
-  }
-
-  const { source } = req.body;
-
   try {
     for (let i = 0; i < TEST_TEXT_BLOCKS.length; i++) {
       const text = TEST_TEXT_BLOCKS[i];
@@ -91,19 +82,19 @@ export default async function handler(req, res) {
           values: embedding,
           metadata: {
             text,                        // le texte complet du bloc
-            source: source || "CGA-2026", // nom de la source
-            createdAt: new Date().toISOString(), // date ISO actuelle
+            source: "CGA-2026",          // source pour filtrer les vecteurs plus tard
+            createdAt: new Date().toISOString(), // date ISO
           },
         },
       ]);
 
-      console.log(`✅ Bloc ${i} injecté dans Pinecone avec source "${source || "CGA-2026"}"`);
+      console.log(`✅ Bloc ${i} injecté dans Pinecone avec source "CGA-2026"`);
     }
 
     return res.status(200).json({
       success: true,
       injected: TEST_TEXT_BLOCKS.length,
-      source: source || "CGA-2026",
+      source: "CGA-2026",
     });
 
   } catch (err) {

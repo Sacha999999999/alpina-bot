@@ -2,56 +2,140 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Chat HuggingFace 2026</title>
+<title>Alpina Conseil Chatbot</title>
 <style>
-body { font-family: Arial; margin:20px; }
-#msgs { border:1px solid #002D58; padding:10px; height:300px; overflow-y:auto; display:flex; flex-direction:column; background:#f9f9f9; }
-.user { color:#002D58; font-weight:bold; margin:6px 0; }
-.ai { color:#333; background:#eee; padding:6px; border-radius:6px; margin:6px 0; }
-input { padding:6px; width:300px; }
-button { padding:6px 12px; margin-left:6px; }
+html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Arial,sans-serif; }
+#alp-chat-box {
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  box-sizing:border-box;
+  border:2px solid #002D58;
+  border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+  background:#fff;
+}
+#alp-header {
+  background:#002D58;
+  color:#D4AF37;
+  padding:15px;
+  font-weight:bold;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:2px solid #D4AF37;
+}
+#alp-header span.close { cursor:pointer; font-size:20px; }
+#alp-msgs { flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; background:#f9f9f9; }
+#welcome-msg { background:#eee; padding:10px; border-radius:8px; line-height:1.4; color:#333; font-size:12.5px; }
+#quick-buttons { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+#quick-buttons button { background:#fff; border:1px solid #002D58; color:#002D58; border-radius:15px; padding:5px 10px; font-size:11px; cursor:pointer; }
+#alp-input-container { display:flex; padding:10px; border-top:1px solid #ccc; }
+#alp-input { flex:1; border:none; outline:none; font-size:14px; color:#333; }
+#send-btn { background:#002D58; color:#D4AF37; border:none; padding:0 15px; cursor:pointer; font-size:18px; }
+.user-msg { background:#002D58; color:white; padding:6px 10px; border-radius:10px 10px 0 10px; align-self:flex-end; max-width:85%; margin-bottom:5px; font-size:13px; }
+.ai-msg { background:#fff; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; border-left:3px solid #D4AF37; max-width:80%; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:5px; line-height:1.4; color:#333; }
+.loader { background:#f0f0f0; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; font-style:italic; color:#666; font-size:12px; border-left:3px solid #D4AF37; margin-bottom:5px; }
 </style>
 </head>
 <body>
 
-<h3>Chat HuggingFace 2026</h3>
-<div id="msgs"></div>
-<input id="input" placeholder="Pose ta question...">
-<button id="send">Envoyer</button>
+<div id="alp-chat-box">
+  <div id="alp-header">
+    <div style="display:flex; flex-direction:column;">
+      <span style="font-size:16px; letter-spacing:1px; line-height:1.2;">ALPINA CONSEIL</span>
+      <span style="font-weight:100; color:#fff; font-size:11px; letter-spacing:0.5px; opacity:0.9;">Votre assistant numérique</span>
+    </div>
+    <span class="close" onclick="window.close()">✕</span>
+  </div>
+
+  <div id="alp-msgs">
+    <div id="welcome-msg">
+      Bonjour, nous sommes à votre écoute. Comment pouvons-nous vous aider ?<br>
+      <strong>Choisissez un sujet ou <a href="https://www.alpina-conseil.ch/contact" target="_blank" style="color:#002D58; text-decoration:underline;">fixez un rendez-vous</a> :</strong>
+    </div>
+    <div id="quick-buttons">
+      <button data-value="Fiscalité">Fiscalité</button>
+      <button data-value="Conseil financier et placements">Finances & Placements</button>
+      <button data-value="3ème pilier">3ème pilier</button>
+      <button data-value="Hypothèque">Hypothèque</button>
+      <button data-value="Planification successorale">Succession</button>
+      <button data-value="Prévoyance et retraite">Prévoyance & Retraite</button>
+      <button data-value="Gestion de fortune">Gestion de fortune</button>
+      <button data-value="Conseil immobilier">Immobilier</button>
+    </div>
+  </div>
+
+  <div id="alp-input-container">
+    <input type="text" id="alp-input" placeholder="Votre question...">
+    <button id="send-btn">➤</button>
+  </div>
+</div>
 
 <script>
-const msgs = document.getElementById("msgs");
-const input = document.getElementById("input");
-const send = document.getElementById("send");
+const msgs = document.getElementById('alp-msgs');
+const input = document.getElementById('alp-input');
+const sendBtn = document.getElementById('send-btn');
 
-function addMessage(text, cls){
-  const div = document.createElement("div");
-  div.className = cls;
-  div.textContent = text;
+function addMessage(text,type){
+  const div=document.createElement('div');
+  div.textContent=text;
+  div.className=type==='user'?'user-msg':'ai-msg';
   msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
 }
 
-send.onclick = async () => {
-  const message = input.value.trim();
-  if(!message) return;
+function showLoader(){
+  const l=document.createElement('div');
+  l.className='loader';
+  l.id='alp-loading-indicator';
+  l.textContent="Alpina IA analyse votre demande...";
+  msgs.appendChild(l);
+  msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
+}
 
-  input.value = "";
-  addMessage(message, "user");
-  addMessage("🤖 IA réfléchit...", "ai");
+function removeLoader(){ document.getElementById('alp-loading-indicator')?.remove(); }
+
+// Préquestions
+document.querySelectorAll('#quick-buttons button').forEach(btn=>{
+  btn.onclick=()=>{
+    input.value=btn.dataset.value;
+    sendMessage();
+  };
+});
+
+// Envoi message
+async function sendMessage(){
+  const val=input.value.trim();
+  if(!val) return;
+  input.value='';
+  addMessage(val,'user');
+  showLoader();
 
   try{
-    const res = await fetch("/api/chat", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ message })
+    const res=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:val})
     });
-    const data = await res.json();
-    msgs.lastChild.textContent = data.text;
+    const data=await res.json();
+    removeLoader();
+    addMessage(data.text,'ai');
   }catch(err){
-    msgs.lastChild.textContent = "❌ Erreur de connexion IA";
+    removeLoader();
+    addMessage('Erreur de connexion.','ai');
   }
-};
+}
+
+// Bouton et Enter
+sendBtn.onclick=sendMessage;
+input.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); sendMessage(); } };
+
+// Si question dans URL
+const params=new URLSearchParams(window.location.search);
+const q=params.get('question');
+if(q){ input.value=q; sendMessage(); }
 </script>
 
 </body>

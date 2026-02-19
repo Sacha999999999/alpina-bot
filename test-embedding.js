@@ -10,7 +10,7 @@ async function testEmbedding() {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "meta-llama/Llama-2-7b-hf", // le modèle sûr
+      model: "meta-llama/Llama-2-7b-hf",
       input: "Bonjour, test embeddings"
     }),
   });
@@ -22,7 +22,7 @@ async function testEmbedding() {
   }
 
   const data = await resp.json();
-  console.log("✅ Embedding reçu, dimension :", data.embedding.length);
+  console.log("✅ Embedding reçu :", data.embedding?.length, "dimensions");
 }
 
 testEmbedding();

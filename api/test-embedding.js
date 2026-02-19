@@ -4,14 +4,14 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 
 export default async function handler(req, res) {
   try {
-    const resp = await fetch("https://api-inference.huggingface.co/v2/embeddings", {
+    const resp = await fetch("https://router.huggingface.co/v1/embeddings", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${HF_TOKEN}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "intfloat/multilingual-e5-large-instruct",
+        model: "meta-llama/Meta-Llama-3-8B-Instruct",
         input: "Bonjour, test embeddings"
       }),
     });

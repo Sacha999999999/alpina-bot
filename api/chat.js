@@ -1,24 +1,21 @@
 import fetch from "node-fetch";
-import pkg from "@pinecone-database/pinecone";
-
-const { PineconeClient } = pkg;
+import { Pinecone } from "@pinecone-database/pinecone";
 
 // 🔹 Variables d'environnement
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME;
 
-// 🔹 Initialise Pinecone (CommonJS compatible)
-const pinecone = new PineconeClient();
-await pinecone.init({ apiKey: PINECONE_API_KEY });
-const index = pinecone.Index(PINECONE_INDEX_NAME);
+// 🔹 Initialise Pinecone (CommonJS / compatible Vercel)
+const pc = new Pinecone({ apiKey: PINECONE_API_KEY });
+const index = pc.index(PINECONE_INDEX_NAME);
 
 // 🔹 Ajout d’un vecteur
 async function addToVectorDB(id, text, embedding) {
   try {
-    await index.upsert({
-      vectors: [{ id, values: embedding, metadata: { text } }],
-    });
+    await index.upsert([
+      { id, values: embedding, metadata: { text } }
+    ]);
     console.log("✅ Upsert OK:", id);
   } catch (err) {
     console.error("❌ Pinecone upsert error:", err.message);
@@ -33,7 +30,7 @@ async function queryVectorDB(embedding, topK = 3) {
       vector: embedding,
       includeMetadata: true,
     });
-    return result.matches.map((m) => m.metadata.text);
+    return result.matches.map(m => m.metadata.text);
   } catch (err) {
     console.error("❌ Pinecone query error:", err.message);
     return [];
@@ -67,7 +64,6 @@ export default async function handler(req, res) {
     if (!embResp.ok) throw new Error(await embResp.text());
     const embData = await embResp.json();
     const embedding = Array.isArray(embData) ? embData[0] : embData?.[0];
-
     if (!embedding) throw new Error("Embedding non disponible");
 
     // 2️⃣ Query Pinecone top-k
@@ -94,8 +90,7 @@ Réponds clairement :
     });
 
     const chatData = await chatResp.json();
-    const text =
-      chatData?.choices?.[0]?.message?.content?.trim() || "🤖 Pas de réponse du modèle.";
+    const text = chatData?.choices?.[0]?.message?.content?.trim() || "🤖 Pas de réponse du modèle.";
     console.log("✅ Réponse finale:", text);
 
     // 5️⃣ Upsert Q/R dans Pinecone

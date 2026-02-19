@@ -11,7 +11,7 @@ const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME;
 const pc = new Pinecone({ apiKey: PINECONE_API_KEY });
 let index;
 
-// 🧠 Assure l'index existe et a la bonne dimension
+// 🧠 Crée l'index si inexistant
 async function initIndex(dim = 1024) {
   try {
     const res = await pc.listIndexes();
@@ -19,7 +19,6 @@ async function initIndex(dim = 1024) {
     if (!existing.includes(PINECONE_INDEX_NAME)) {
       console.log(`⚡ Création de l’index Pinecone: ${PINECONE_INDEX_NAME} (${dim}D)`);
       await pc.createIndex({ name: PINECONE_INDEX_NAME, dimension: dim });
-      // attendre quelques secondes pour que l'index soit prêt
       await new Promise(r => setTimeout(r, 5000));
     }
     index = pc.index(PINECONE_INDEX_NAME);
@@ -29,10 +28,10 @@ async function initIndex(dim = 1024) {
   }
 }
 
-// 🧠 Upsert dans Pinecone
+// 🧠 Upsert sécurisé
 async function addToVectorDB(id, text, embedding) {
-  if (!embedding || !Array.isArray(embedding) || !embedding.every(n => typeof n === 'number')) {
-    console.error("❌ Embedding non valide pour Pinecone:", embedding?.length);
+  if (!embedding || !Array.isArray(embedding) || !embedding.every(n => typeof n === "number")) {
+    console.error("❌ Embedding invalide pour Pinecone:", embedding?.length);
     return;
   }
   try {
@@ -45,7 +44,7 @@ async function addToVectorDB(id, text, embedding) {
   }
 }
 
-// 🧠 Query Pinecone
+// 🧠 Query sécurisé
 async function queryVectorDB(embedding, topK = 3) {
   if (!embedding || !Array.isArray(embedding)) return [];
   try {
@@ -76,7 +75,7 @@ export default async function handler(req, res) {
     // 1) Création Embedding HF
     // ===============================
     const embResponse = await fetch(
-      "https://router.huggingface.co/hf-inference/models/llama/llama-text-embed-v2/pipeline/feature-extraction",
+      "https://api-inference.huggingface.co/models/tiiuae/llama-2-7b-hf", // ← endpoint correct embeddings
       {
         method: "POST",
         headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
@@ -91,9 +90,9 @@ export default async function handler(req, res) {
     }
 
     const embData = await embResponse.json();
-    // ✅ Flatten embedding en 1D si nécessaire
     const embedding = Array.isArray(embData) && Array.isArray(embData[0]) ? embData[0] : embData;
-    if (!embedding || !Array.isArray(embedding) || !embedding.every(n => typeof n === 'number')) {
+
+    if (!embedding || !Array.isArray(embedding) || !embedding.every(n => typeof n === "number")) {
       console.error("❌ Embedding invalide reçu:", embData);
       return res.status(500).json({ text: "Erreur: embedding invalide." });
     }
@@ -119,15 +118,10 @@ Utilisateur : ${message}
 Réponds clairement :
 `;
 
-    const chatResp = await fetch("https://router.huggingface.co/v1/chat/completions", {
+    const chatResp = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", {
       method: "POST",
       headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "meta-llama/Meta-Llama-3-8B-Instruct",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        max_new_tokens: 512,
-      }),
+      body: JSON.stringify({ inputs: prompt, parameters: { max_new_tokens: 512, temperature: 0.7 } }),
     });
 
     if (!chatResp.ok) {
@@ -137,7 +131,7 @@ Réponds clairement :
     }
 
     const chatData = await chatResp.json();
-    const text = chatData?.choices?.[0]?.message?.content?.trim() || "🤖 Pas de réponse du modèle.";
+    const text = chatData?.generated_text?.trim() || "🤖 Pas de réponse du modèle.";
     console.log("✅ Réponse HF:", text);
 
     // ===============================

@@ -26,81 +26,75 @@
 </div>
 
 <style>
-/* ===== GLOBAL MOBILE & IOS SAFE ===== */
 html, body {
-  overflow-x: hidden;
-  margin: 0;
-  padding: 0;
-  height: 100%;
+  margin:0;
+  padding:0;
+  overflow-x:hidden;
+  height:100%;
 }
 
-/* ===== DESKTOP (STRICTEMENT INCHANGÉ) ===== */
+/* Desktop inchangé */
 #alp-chat-box {
-  display: none;
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  width: 370px;
-  height: 540px;
-  z-index: 999998;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  background: #fff;
+  display:none;
+  position:fixed;
+  bottom:80px;
+  right:20px;
+  width:370px;
+  height:540px;
+  z-index:999998;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+  background:#fff;
 }
 
 #alp-chat-box iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
+  width:100%;
+  height:100%;
+  border:none;
 }
 
-/* ===== MOBILE VERSION STABLE ===== */
-@media (max-width: 768px) {
+/* Mobile responsive stable */
+@media (max-width:768px){
   #alp-chat-box {
-    left: 4% !important;
-    right: auto !important;
-    width: 92% !important;
-    max-width: 92% !important;
-    height: calc(100vh - 20px) !important;  /* prend presque tout l'écran */
-    max-height: 95vh !important;             /* jamais plus que le viewport */
-    bottom: 10px !important;                 /* toujours visible avec clavier */
-    border-radius: 18px;
-    transition: height 0.2s ease, bottom 0.2s ease; /* animation douce clavier */
+    left:4% !important;
+    right:auto !important;
+    width:92% !important;
+    max-width:92% !important;
+    height:calc(100vh - 20px) !important; /* prend presque tout l'écran */
+    max-height:95vh !important;
+    bottom:10px !important;
+    border-radius:18px;
+    transition:height 0.2s ease,bottom 0.2s ease;
   }
 
-  /* Ajuste la hauteur en cas d'ouverture du clavier */
+  /* Ajustement clavier mobile */
   body.keyboard-open #alp-chat-box {
-    height: calc(100vh - env(safe-area-inset-top) - 10px) !important;
-    bottom: env(safe-area-inset-bottom) !important;
+    height:calc(100vh - env(safe-area-inset-top) - 10px) !important;
+    bottom:env(safe-area-inset-bottom) !important;
   }
 }
 </style>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function(){
 
   const chatBox = document.getElementById('alp-chat-box');
   const toggleBtn = document.getElementById('alp-toggle');
 
-  if (!chatBox || !toggleBtn) return;
+  if(!chatBox || !toggleBtn) return;
 
-  // Toggle bouton
-  toggleBtn.addEventListener("click", function() {
-    chatBox.style.display =
-      chatBox.style.display === "block" ? "none" : "block";
+  // Toggle simple
+  toggleBtn.addEventListener("click", function(){
+    chatBox.style.display = chatBox.style.display === "block" ? "none" : "block";
   });
 
-  // ===== GESTION MOBILE CLAVIER =====
-  let initialViewportHeight = window.innerHeight;
-
-  window.addEventListener('resize', () => {
-    const vh = window.innerHeight;
-    if(vh < initialViewportHeight) {
-      // Clavier ouvert
+  // Détection clavier mobile
+  let initialHeight = window.innerHeight;
+  window.addEventListener('resize', ()=>{
+    if(window.innerHeight < initialHeight){
       document.body.classList.add('keyboard-open');
-    } else {
-      // Clavier fermé
+    }else{
       document.body.classList.remove('keyboard-open');
     }
   });

@@ -13,17 +13,16 @@ html, body {
   margin:0;
   padding:0;
   height:100%;
-  overflow-x:hidden; /* empêche glissement horizontal */
+  overflow-x:hidden;
   font-family:Arial,sans-serif;
   box-sizing:border-box;
 }
-*, *::before, *::after {
-  box-sizing: inherit;
-}
+*, *::before, *::after { box-sizing: inherit; }
 
 /* ===== CHATBOX (desktop inchangé) ===== */
 #alp-chat-box {
   width:100%;
+  height:100%;
   display:flex;
   flex-direction:column;
   border:2px solid #002D58;
@@ -31,7 +30,6 @@ html, body {
   box-shadow:0 10px 30px rgba(0,0,0,0.3);
   background:#fff;
   box-sizing:border-box;
-  max-height:100%;
 }
 #alp-header {
   background:#002D58;
@@ -60,12 +58,11 @@ html, body {
   #alp-chat-box {
     position:fixed !important;
     left:4% !important;
-    right:auto !important;
+    right:4% !important;
     width:92% !important;
     max-width:92% !important;
-    height: auto !important;      /* hauteur automatique selon viewport */
-    max-height: 85vh !important;   /* ne dépasse pas 85% de l'écran */
-    bottom:5vh !important;         /* toujours visible même clavier ouvert */
+    height: calc(100vh - 80px) !important; /* prend presque tout l'écran */
+    bottom:20px !important; /* reste visible avec clavier */
     border-radius:18px;
   }
 }
@@ -129,7 +126,6 @@ function showLoader(){
 
 function removeLoader(){ document.getElementById('alp-loading-indicator')?.remove(); }
 
-// Préquestions
 document.querySelectorAll('#quick-buttons button').forEach(btn=>{
   btn.onclick=()=>{
     input.value=btn.dataset.value;
@@ -137,7 +133,6 @@ document.querySelectorAll('#quick-buttons button').forEach(btn=>{
   };
 });
 
-// Envoi message
 async function sendMessage(){
   const val=input.value.trim();
   if(!val) return;
@@ -160,11 +155,9 @@ async function sendMessage(){
   }
 }
 
-// Bouton et Enter
 sendBtn.onclick=sendMessage;
 input.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); sendMessage(); } };
 
-// Si question dans URL
 const params=new URLSearchParams(window.location.search);
 const q=params.get('question');
 if(q){ input.value=q; sendMessage(); }

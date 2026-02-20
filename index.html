@@ -3,18 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <title>Alpina Conseil Chatbot</title>
+
+<!-- FIX MOBILE VIEWPORT -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
 <style>
-html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Arial,sans-serif; }
+/* ===== GLOBAL SAFE ===== */
+html, body {
+  margin:0;
+  padding:0;
+  height:100%;
+  overflow-x:hidden; /* empêche glissement horizontal */
+  font-family:Arial,sans-serif;
+  box-sizing:border-box;
+}
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+/* ===== CHATBOX (desktop inchangé) ===== */
 #alp-chat-box {
   width:100%;
   height:100%;
   display:flex;
   flex-direction:column;
-  box-sizing:border-box;
   border:2px solid #002D58;
   border-radius:10px;
   box-shadow:0 10px 30px rgba(0,0,0,0.3);
   background:#fff;
+  box-sizing:border-box;
 }
 #alp-header {
   background:#002D58;
@@ -37,8 +54,23 @@ html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Aria
 .user-msg { background:#002D58; color:white; padding:6px 10px; border-radius:10px 10px 0 10px; align-self:flex-end; max-width:85%; margin-bottom:5px; font-size:13px; }
 .ai-msg { background:#fff; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; border-left:3px solid #D4AF37; max-width:80%; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:5px; line-height:1.4; color:#333; }
 .loader { background:#f0f0f0; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; font-style:italic; color:#666; font-size:12px; border-left:3px solid #D4AF37; margin-bottom:5px; }
+
+/* ===== MOBILE STABLE ===== */
+@media (max-width: 768px) {
+  #alp-chat-box {
+    position:fixed !important;
+    left:4% !important;
+    right:auto !important;
+    width:92% !important;
+    max-width:92% !important;
+    height:65vh !important;
+    bottom:90px !important;
+    border-radius:18px;
+  }
+}
 </style>
 </head>
+
 <body>
 
 <div id="alp-chat-box">
@@ -47,7 +79,6 @@ html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Aria
       <span style="font-size:16px; letter-spacing:1px; line-height:1.2;">ALPINA CONSEIL</span>
       <span style="font-weight:100; color:#fff; font-size:11px; letter-spacing:0.5px; opacity:0.9;">Votre assistant numérique</span>
     </div>
- 
   </div>
 
   <div id="alp-msgs">

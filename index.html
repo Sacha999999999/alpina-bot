@@ -13,16 +13,15 @@ html, body {
   margin:0;
   padding:0;
   height:100%;
-  overflow-x:hidden;
+  overflow:hidden;
   font-family:Arial,sans-serif;
   box-sizing:border-box;
 }
 *, *::before, *::after { box-sizing: inherit; }
 
-/* ===== CHATBOX (DESKTOP inchangé) ===== */
+/* ===== CHATBOX (desktop inchangé) ===== */
 #alp-chat-box {
   width:100%;
-  height:100%;
   display:flex;
   flex-direction:column;
   border:2px solid #002D58;
@@ -30,6 +29,7 @@ html, body {
   box-shadow:0 10px 30px rgba(0,0,0,0.3);
   background:#fff;
   box-sizing:border-box;
+  max-height:100%;
 }
 #alp-header {
   background:#002D58;
@@ -53,18 +53,16 @@ html, body {
 .ai-msg { background:#fff; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; border-left:3px solid #D4AF37; max-width:80%; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:5px; line-height:1.4; color:#333; }
 .loader { background:#f0f0f0; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; font-style:italic; color:#666; font-size:12px; border-left:3px solid #D4AF37; margin-bottom:5px; }
 
-/* ===== MOBILE CORRECT ===== */
-@media (max-width:768px){
+/* ===== MOBILE ADAPTÉ ===== */
+@media (max-width: 768px) {
   #alp-chat-box {
     position:fixed !important;
-    left:0 !important;
-    right:0 !important;
-    width:100% !important;
-    max-width:100% !important;
-    height:100% !important;           /* prend toute la hauteur dispo */
-    top:0 !important;
+    left:4% !important;
+    width:92% !important;
+    max-width:92% !important;
     bottom:0 !important;
-    border-radius:0 !important;       /* pas d’arrondi pour maximiser l’espace */
+    border-radius:18px;
+    /* hauteur dynamique via JS */
   }
 }
 </style>
@@ -104,14 +102,16 @@ html, body {
 </div>
 
 <script>
-// ===== FIX MOBILE HEIGHT DYNAMIQUE =====
-function setVh() {
-  let vh = window.innerHeight * 0.01;
-  document.documentElement.style.setProperty('--vh', `${vh}px`);
+// ===== FONCTION HAUTEUR DYNAMIQUE =====
+function updateChatHeight() {
+  const chatBox = document.getElementById('alp-chat-box');
+  chatBox.style.height = `${window.innerHeight}px`;
 }
-window.addEventListener('resize', setVh);
-window.addEventListener('orientationchange', setVh);
-setVh();
+window.addEventListener('resize', updateChatHeight);
+window.addEventListener('orientationchange', updateChatHeight);
+window.addEventListener('focusin', updateChatHeight);  // clavier ouvert
+window.addEventListener('focusout', updateChatHeight); // clavier fermé
+updateChatHeight(); // initial
 
 // ===== CHAT LOGIC =====
 const msgs = document.getElementById('alp-msgs');
@@ -137,17 +137,21 @@ function showLoader(){
 
 function removeLoader(){ document.getElementById('alp-loading-indicator')?.remove(); }
 
+// Préquestions
 document.querySelectorAll('#quick-buttons button').forEach(btn=>{
-  btn.onclick=()=>{ input.value=btn.dataset.value; sendMessage(); };
+  btn.onclick=()=>{
+    input.value=btn.dataset.value;
+    sendMessage();
+  };
 });
 
+// Envoi message
 async function sendMessage(){
   const val=input.value.trim();
   if(!val) return;
   input.value='';
   addMessage(val,'user');
   showLoader();
-
   try{
     const res=await fetch('/api/chat',{
       method:'POST',
@@ -163,17 +167,17 @@ async function sendMessage(){
   }
 }
 
-// ===== ENTER KEY =====
-sendBtn.onclick=sendMessage;
-input.onkeydown=e=>{
+// Bouton et Enter
+sendBtn.onclick = sendMessage;
+input.onkeydown = e => {
   if(e.key==='Enter'){
     e.preventDefault();
     sendMessage();
-    input.blur(); // ferme clavier mobile immédiatement
+    input.blur(); // ferme clavier sur mobile si nécessaire
   }
 };
 
-// ===== QUESTION URL =====
+// Question depuis URL
 const params=new URLSearchParams(window.location.search);
 const q=params.get('question');
 if(q){ input.value=q; sendMessage(); }

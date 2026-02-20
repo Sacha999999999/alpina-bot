@@ -13,13 +13,13 @@ html, body {
   margin:0;
   padding:0;
   height:100%;
-  overflow-x:hidden; 
+  overflow:hidden;
   font-family:Arial,sans-serif;
   box-sizing:border-box;
 }
 *, *::before, *::after { box-sizing: inherit; }
 
-/* ===== CHATBOX (desktop inchangé) ===== */
+/* ===== CHATBOX (DESKTOP STRICTEMENT INCHANGÉ) ===== */
 #alp-chat-box {
   width:100%;
   height:100%;
@@ -42,28 +42,102 @@ html, body {
   border-bottom:2px solid #D4AF37;
 }
 #alp-header span.close { cursor:pointer; font-size:20px; }
-#alp-msgs { flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; background:#f9f9f9; }
-#welcome-msg { background:#eee; padding:10px; border-radius:8px; line-height:1.4; color:#333; font-size:12.5px; }
-#quick-buttons { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
-#quick-buttons button { background:#fff; border:1px solid #002D58; color:#002D58; border-radius:15px; padding:5px 10px; font-size:11px; cursor:pointer; }
-#alp-input-container { display:flex; padding:10px; border-top:1px solid #ccc; }
-#alp-input { flex:1; border:none; outline:none; font-size:14px; color:#333; }
-#send-btn { background:#002D58; color:#D4AF37; border:none; padding:0 15px; cursor:pointer; font-size:18px; }
-.user-msg { background:#002D58; color:white; padding:6px 10px; border-radius:10px 10px 0 10px; align-self:flex-end; max-width:85%; margin-bottom:5px; font-size:13px; }
-.ai-msg { background:#fff; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; border-left:3px solid #D4AF37; max-width:80%; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:5px; line-height:1.4; color:#333; }
-.loader { background:#f0f0f0; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; font-style:italic; color:#666; font-size:12px; border-left:3px solid #D4AF37; margin-bottom:5px; }
+#alp-msgs {
+  flex:1;
+  padding:10px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  background:#f9f9f9;
+}
+#welcome-msg {
+  background:#eee;
+  padding:10px;
+  border-radius:8px;
+  line-height:1.4;
+  color:#333;
+  font-size:12.5px;
+}
+#quick-buttons {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:5px;
+}
+#quick-buttons button {
+  background:#fff;
+  border:1px solid #002D58;
+  color:#002D58;
+  border-radius:15px;
+  padding:5px 10px;
+  font-size:11px;
+  cursor:pointer;
+}
+#alp-input-container {
+  display:flex;
+  padding:10px;
+  border-top:1px solid #ccc;
+}
+#alp-input {
+  flex:1;
+  border:none;
+  outline:none;
+  font-size:14px;
+  color:#333;
+}
+#send-btn {
+  background:#002D58;
+  color:#D4AF37;
+  border:none;
+  padding:0 15px;
+  cursor:pointer;
+  font-size:18px;
+}
+.user-msg {
+  background:#002D58;
+  color:white;
+  padding:6px 10px;
+  border-radius:10px 10px 0 10px;
+  align-self:flex-end;
+  max-width:85%;
+  margin-bottom:5px;
+  font-size:13px;
+}
+.ai-msg {
+  background:#fff;
+  padding:10px;
+  border-radius:12px 12px 12px 0;
+  align-self:flex-start;
+  border-left:3px solid #D4AF37;
+  max-width:80%;
+  box-shadow:0 2px 5px rgba(0,0,0,0.05);
+  margin-bottom:5px;
+  line-height:1.4;
+  color:#333;
+}
+.loader {
+  background:#f0f0f0;
+  padding:10px;
+  border-radius:12px 12px 12px 0;
+  align-self:flex-start;
+  font-style:italic;
+  color:#666;
+  font-size:12px;
+  border-left:3px solid #D4AF37;
+  margin-bottom:5px;
+}
 
-/* ===== MOBILE ADAPTÉ STABLE ===== */
+/* ===== MOBILE STABLE ===== */
 @media (max-width: 768px) {
   #alp-chat-box {
     position:fixed !important;
     left:4% !important;
-    right:4% !important;
     width:92% !important;
     max-width:92% !important;
-    height:calc(var(--vh, 1vh) * 100 - 80px) !important; /* dynamique selon viewport */
-    bottom:20px !important;
     border-radius:18px;
+    bottom:5px !important;
+    height:calc(var(--vh, 1vh) * 100 - 10px) !important; /* hauteur dynamique selon viewport réel */
   }
 }
 </style>
@@ -103,8 +177,8 @@ html, body {
 </div>
 
 <script>
-// ===== DYNAMIC MOBILE HEIGHT (fix clavier mobile) =====
-function setVh() {
+// ===== FIX MOBILE VH DYNAMIQUE =====
+function setVh(){
   document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
 }
 window.addEventListener('resize', setVh);
@@ -164,7 +238,13 @@ async function sendMessage(){
 
 // Bouton et Enter
 sendBtn.onclick=sendMessage;
-input.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); sendMessage(); input.blur(); } };
+input.onkeydown=e=>{
+  if(e.key==='Enter'){
+    e.preventDefault();
+    sendMessage();
+    input.blur(); // force clavier à se fermer sur mobile
+  }
+};
 
 // Question depuis URL
 const params=new URLSearchParams(window.location.search);

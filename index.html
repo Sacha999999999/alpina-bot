@@ -24,7 +24,6 @@ html, body {
 /* ===== CHATBOX (desktop inchangé) ===== */
 #alp-chat-box {
   width:100%;
-  height:100%;
   display:flex;
   flex-direction:column;
   border:2px solid #002D58;
@@ -32,6 +31,7 @@ html, body {
   box-shadow:0 10px 30px rgba(0,0,0,0.3);
   background:#fff;
   box-sizing:border-box;
+  max-height:100%;
 }
 #alp-header {
   background:#002D58;
@@ -55,7 +55,7 @@ html, body {
 .ai-msg { background:#fff; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; border-left:3px solid #D4AF37; max-width:80%; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:5px; line-height:1.4; color:#333; }
 .loader { background:#f0f0f0; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; font-style:italic; color:#666; font-size:12px; border-left:3px solid #D4AF37; margin-bottom:5px; }
 
-/* ===== MOBILE STABLE ===== */
+/* ===== MOBILE ADAPTÉ ===== */
 @media (max-width: 768px) {
   #alp-chat-box {
     position:fixed !important;
@@ -63,8 +63,9 @@ html, body {
     right:auto !important;
     width:92% !important;
     max-width:92% !important;
-    height:65vh !important;
-    bottom:90px !important;
+    height: auto !important;      /* hauteur automatique selon viewport */
+    max-height: 85vh !important;   /* ne dépasse pas 85% de l'écran */
+    bottom:5vh !important;         /* toujours visible même clavier ouvert */
     border-radius:18px;
   }
 }

@@ -13,13 +13,13 @@ html, body {
   margin:0;
   padding:0;
   height:100%;
-  overflow:hidden;
+  overflow-x:hidden;
   font-family:Arial,sans-serif;
   box-sizing:border-box;
 }
 *, *::before, *::after { box-sizing: inherit; }
 
-/* ===== CHATBOX (DESKTOP STRICTEMENT INCHANGÉ) ===== */
+/* ===== CHATBOX (desktop inchangé) ===== */
 #alp-chat-box {
   width:100%;
   height:100%;
@@ -135,9 +135,9 @@ html, body {
     left:4% !important;
     width:92% !important;
     max-width:92% !important;
+    height: calc(var(--vh, 1vh) * 100 - 20px) !important; /* hauteur dynamique selon viewport */
+    bottom:10px !important;
     border-radius:18px;
-    bottom:5px !important;
-    height:calc(var(--vh, 1vh) * 100 - 10px) !important; /* hauteur dynamique selon viewport réel */
   }
 }
 </style>
@@ -177,8 +177,8 @@ html, body {
 </div>
 
 <script>
-// ===== FIX MOBILE VH DYNAMIQUE =====
-function setVh(){
+// ===== DYNAMIC VH (mobile keyboard fix) =====
+function setVh() {
   document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
 }
 window.addEventListener('resize', setVh);
@@ -209,12 +209,10 @@ function showLoader(){
 
 function removeLoader(){ document.getElementById('alp-loading-indicator')?.remove(); }
 
-// Préquestions
 document.querySelectorAll('#quick-buttons button').forEach(btn=>{
   btn.onclick=()=>{ input.value=btn.dataset.value; sendMessage(); };
 });
 
-// Envoi message
 async function sendMessage(){
   const val=input.value.trim();
   if(!val) return;
@@ -236,13 +234,13 @@ async function sendMessage(){
   }
 }
 
-// Bouton et Enter
+// Bouton et Enter (clavier ferme automatiquement)
 sendBtn.onclick=sendMessage;
 input.onkeydown=e=>{
   if(e.key==='Enter'){
     e.preventDefault();
     sendMessage();
-    input.blur(); // force clavier à se fermer sur mobile
+    input.blur(); // force fermeture clavier sur mobile
   }
 };
 

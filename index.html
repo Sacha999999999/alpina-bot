@@ -1,10 +1,22 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <title>Alpina Conseil Chatbot</title>
+
+<!-- Bloque zoom sur mobile -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <style>
-html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Arial,sans-serif; }
+html, body { 
+  margin:0; 
+  padding:0; 
+  height:100%; 
+  overflow:hidden; 
+  font-family:Arial,sans-serif; 
+}
+
+/* Chatbox */
 #alp-chat-box {
   width:100%;
   height:100%;
@@ -16,6 +28,8 @@ html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Aria
   box-shadow:0 10px 30px rgba(0,0,0,0.3);
   background:#fff;
 }
+
+/* Header */
 #alp-header {
   background:#002D58;
   color:#D4AF37;
@@ -27,16 +41,93 @@ html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Aria
   border-bottom:2px solid #D4AF37;
 }
 #alp-header span.close { cursor:pointer; font-size:20px; }
-#alp-msgs { flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; background:#f9f9f9; }
-#welcome-msg { background:#eee; padding:10px; border-radius:8px; line-height:1.4; color:#333; font-size:12.5px; }
+
+/* Messages */
+#alp-msgs { 
+  flex:1; 
+  padding:10px; 
+  overflow-y:auto; 
+  display:flex; 
+  flex-direction:column; 
+  gap:8px; 
+  background:#f9f9f9; 
+}
+#welcome-msg { 
+  background:#eee; 
+  padding:10px; 
+  border-radius:8px; 
+  line-height:1.4; 
+  color:#333; 
+  font-size:12.5px; 
+}
 #quick-buttons { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
-#quick-buttons button { background:#fff; border:1px solid #002D58; color:#002D58; border-radius:15px; padding:5px 10px; font-size:11px; cursor:pointer; }
+#quick-buttons button { 
+  background:#fff; 
+  border:1px solid #002D58; 
+  color:#002D58; 
+  border-radius:15px; 
+  padding:5px 10px; 
+  font-size:11px; 
+  cursor:pointer; 
+}
+
+/* Input */
 #alp-input-container { display:flex; padding:10px; border-top:1px solid #ccc; }
-#alp-input { flex:1; border:none; outline:none; font-size:14px; color:#333; }
-#send-btn { background:#002D58; color:#D4AF37; border:none; padding:0 15px; cursor:pointer; font-size:18px; }
-.user-msg { background:#002D58; color:white; padding:6px 10px; border-radius:10px 10px 0 10px; align-self:flex-end; max-width:85%; margin-bottom:5px; font-size:13px; }
-.ai-msg { background:#fff; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; border-left:3px solid #D4AF37; max-width:80%; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:5px; line-height:1.4; color:#333; }
-.loader { background:#f0f0f0; padding:10px; border-radius:12px 12px 12px 0; align-self:flex-start; font-style:italic; color:#666; font-size:12px; border-left:3px solid #D4AF37; margin-bottom:5px; }
+#alp-input { 
+  flex:1; 
+  border:none; 
+  outline:none; 
+  font-size:16px; /* 🔹 16px pour empêcher zoom sur mobile */
+  color:#333; 
+}
+#send-btn { 
+  background:#002D58; 
+  color:#D4AF37; 
+  border:none; 
+  padding:0 15px; 
+  cursor:pointer; 
+  font-size:18px; 
+}
+
+/* Messages styles */
+.user-msg { 
+  background:#002D58; 
+  color:white; 
+  padding:6px 10px; 
+  border-radius:10px 10px 0 10px; 
+  align-self:flex-end; 
+  max-width:85%; 
+  margin-bottom:5px; 
+  font-size:13px; 
+}
+.ai-msg { 
+  background:#fff; 
+  padding:10px; 
+  border-radius:12px 12px 12px 0; 
+  align-self:flex-start; 
+  border-left:3px solid #D4AF37; 
+  max-width:80%; 
+  box-shadow:0 2px 5px rgba(0,0,0,0.05); 
+  margin-bottom:5px; 
+  line-height:1.4; 
+  color:#333; 
+}
+.loader { 
+  background:#f0f0f0; 
+  padding:10px; 
+  border-radius:12px 12px 12px 0; 
+  align-self:flex-start; 
+  font-style:italic; 
+  color:#666; 
+  font-size:12px; 
+  border-left:3px solid #D4AF37; 
+  margin-bottom:5px; 
+}
+
+/* ===== MOBILE INPUTS ===== */
+@media (max-width: 768px) {
+  #alp-input { font-size:16px !important; }
+}
 </style>
 </head>
 <body>
@@ -47,7 +138,6 @@ html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Aria
       <span style="font-size:16px; letter-spacing:1px; line-height:1.2;">ALPINA CONSEIL</span>
       <span style="font-weight:100; color:#fff; font-size:11px; letter-spacing:0.5px; opacity:0.9;">Votre assistant numérique</span>
     </div>
- 
   </div>
 
   <div id="alp-msgs">
